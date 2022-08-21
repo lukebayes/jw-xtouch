@@ -1,5 +1,5 @@
 /* TODO
-    -startup options (ports)    
+    -startup options (ports)
 */
 
 /*
@@ -13,7 +13,7 @@ key: [144, 0-101, 0/127]
 faders: [224-232, ???, 0-127]
 knobs (rotation): [176, 16-23, 1/65]
 knobs (button): [144, 32-39, 0/127]
-knobs (lights): [176, 48-55,0-127] 
+knobs (lights): [176, 48-55,0-127]
 jog/shuttle: [176,60, 1/65]
 Display-lights: 176
     small lights:
@@ -26,7 +26,7 @@ Display-lights: 176
 	Minutes/Beats: 70, 69
 	Seconds/Sub Division: 68, 67
 	Frames/Ticks: 66, 65, 64
-	
+
 	Values:
 		48=0
 		49=1
@@ -39,13 +39,14 @@ Display-lights: 176
 		56=8
 		57=9
         58=OFF
-        
+
 Level Lights: [208, 0-127?, ???]
 
 */
 
 var midi = require('midi');
 
+// NOTE(lbayes): These shouldn't be initialized at module load time.
 var midiIn = new midi.Input();
 var midiOut = new midi.Output();
 
@@ -135,15 +136,15 @@ function error(msg) {
 var _events = {};
 function on(event, callback) {
     //attaches a callback function to an event
-    _events[event] = callback;    
+    _events[event] = callback;
 }
 function emit(event, msg) {
     if (typeof _events[event] === 'function') { //the client has registered the event
-        _events[event](msg); //run the event function provided            
-    } 
+        _events[event](msg); //run the event function provided
+    }
     if (event === 'action') {
         runControlMap(msg);
-    }  
+    }
 }
 /******************************************************************************/
 
@@ -174,7 +175,7 @@ function sendMidi(midiMsg) {
 
     commandStack.push(midiMsg);
 	//if the midi interval is not already running
-	if (!commandInterval) { 
+	if (!commandInterval) {
         //immediately send the fist midi msg
         debug('MIDI Out: ' + commandStack[0]);
         try {
@@ -184,11 +185,11 @@ function sendMidi(midiMsg) {
         }
 		commandStack.shift();
 		//start the interval
-		startMidiInterval(); 
+		startMidiInterval();
 	}
 }
 
-function startMidiInterval() {	
+function startMidiInterval() {
 	commandInterval = setInterval(function() {
 		if (commandStack.length > 0) {
             try {
@@ -207,9 +208,9 @@ function startMidiInterval() {
 function stopMidiInterval() {
 	clearInterval(commandInterval);
 	commandInterval = null;
-	
-	if (keySequence) { 
-		sendKeys(keySequence); 
+
+	if (keySequence) {
+		sendKeys(keySequence);
 		keySequence = null;
 	}
 }
@@ -262,14 +263,14 @@ function runControlMap(action) {
             return true;
         }
     } catch (e) { }
-    
+
     try {
         if (typeof modeMap[mode][control][name][state] === 'function') {
-            modeMap[mode][control][name][state]();    
+            modeMap[mode][control][name][state]();
             return true;
-        } 
+        }
     } catch(e) { }
-    
+
 
     //now the standard mappings
 
@@ -294,20 +295,20 @@ function runControlMap(action) {
     //so for example all the button presses that should fire on the 'up' state
     try {
         if (typeof controlMap[control][state][name] === 'function') {
-            controlMap[control][state][name]();    
+            controlMap[control][state][name]();
             return true;
-        } 
+        }
     } catch(e) { }
 
     //this checks for a mapping based on type/name/state
     //this is better for when a different event happens on each state
     //best for the jog-shuttle wheel or when the knobs are in default mode
-    try {    
+    try {
         if (typeof controlMap[control][name][state] === 'function') {
             controlMap[control][name][state]();
             return true;
         }
-    } catch(e) { }    
+    } catch(e) { }
 }
 
 
@@ -318,9 +319,9 @@ function callbackSafe(callback, option) {
 
 /**
  * Starts the midi device
- * 
- * @param {function} callback 
- * @param {object} options 
+ *
+ * @param {function} callback
+ * @param {object} options
  */
 function start(callback, options) {
 
@@ -329,13 +330,13 @@ function start(callback, options) {
     debug('MIDI Devices:');
     for (var i=0; i<midiOut.getPortCount(); i++) {
         var name = midiOut.getPortName(i);
-        debug(i + ': ' + name);	
-        if (name.toLowerCase().indexOf('x-touch') > -1 && midiDeviceIndex === -1) { 
-            midiDeviceIndex = i; 
+        debug(i + ': ' + name);
+        if (name.toLowerCase().indexOf('x-touch') > -1 && midiDeviceIndex === -1) {
+            midiDeviceIndex = i;
         }
     }
 
-    if (midiDeviceIndex) { 
+    if (midiDeviceIndex) {
         debug('Found probable X-Touch on device ' + midiDeviceIndex);
     } else {
         debug("Didn't find expected midi device, using port " + midiDeviceIndex);
@@ -351,16 +352,16 @@ function start(callback, options) {
             }
         }
     }
-    midiIn.openPort(0);
     try {
+        midiIn.openPort(midiDeviceIndex);
         midiOut.openPort(midiDeviceIndex);
         callbackSafe(callback, 'Midi open on port ' + midiDeviceIndex);
     } catch(e) {
         emit('error', e);
         callbackSafe(callback, 'Midi init failed on port ' + midiDeviceIndex);
     }
-    
-    
+
+
 }
 
 
@@ -394,7 +395,7 @@ var buttons = {
     16:'CH1.MUTE', 17:'CH2.MUTE', 18:'CH3.MUTE', 19:'CH4.MUTE', 20:'CH5.MUTE', 21:'CH6.MUTE', 22:'CH7.MUTE', 23:'CH8.MUTE',
     24:'CH1.SELECT', 25:'CH2.SELECT', 26:'CH3.SELECT', 27:'CH4.SELECT', 28:'CH5.SELECT', 29:'CH6.SELECT', 30:'CH7.SELECT', 31:'CH8.SELECT',
     40:'TRACK', 41:'SEND', 42:'PAN/SURROUND', 43:'PLUG-IN', 44:'EQ', 45:'INST',
-    46:'FADER BANK LEFT', 47:'FADER BANK RIGHT', 48:'CHANNEL LEFT', 49:'CHANNEL RIGHT', 
+    46:'FADER BANK LEFT', 47:'FADER BANK RIGHT', 48:'CHANNEL LEFT', 49:'CHANNEL RIGHT',
     50:'FLIP',
     51:'GLOBAL VIEW',
     52:'NAME/VALUE',
@@ -405,7 +406,7 @@ var buttons = {
     74:'READ/OFF', 75:'WRITE', 76:'TRIM', 77:'TOUCH', 78:'LATCH', 79:'GROUP',
     80:'SAVE', 81:'UNDO', 82:'CANCEL', 83:'ENTER',
     84:'MARKER', 85:'NUDGE', 86:'CYCLE', 87:'DROP', 88:'REPLACE', 89:'CLICK', 90:'SOLO',
-    91:'REW', 92:'FWD', 93:'STOP', 94:'PLAY', 95:'REC', 
+    91:'REW', 92:'FWD', 93:'STOP', 94:'PLAY', 95:'REC',
     96:'UP', 97:'DOWN', 98:'LEFT', 99:'RIGHT', 100:'ENTER',
 
     101:'SCRUB',
@@ -431,20 +432,20 @@ var knobLightMap = {
         sequence: {
             0:0, OFF:0,
             1:1, 2:2, 3:3, 4:4, 5:5, 6:6,
-            7:7, 8:8, 9:9, 10:10, 11:11 
+            7:7, 8:8, 9:9, 10:10, 11:11
         },
         pan: {
             OFF: 0,
             '-5':17, '-4':18, '-3':19, '-2':20, '-1':21,
-            '0':22, 
-            '1':23,  '2':24, '3':25, '4':26, '5':27 
+            '0':22,
+            '1':23,  '2':24, '3':25, '4':26, '5':27
         },
         level: {
             0:32, 1:33, 2:34, 3:35, 4:36, 5:37, 6: 38,
             7:39, 8:40, 9:41, 10:42, 11:43, //12:107
-            //12 kinda works as it adds one light to the end, 
+            //12 kinda works as it adds one light to the end,
             //but it also adds an extra one to the beginning, so for now, no.
-        }, 
+        },
         fill: {
             0:0, OFF:0,
             1:49, 2:50, 3:51, 4:52, 5:53, 6:54, 7:118
@@ -454,7 +455,7 @@ var knobLightMap = {
             0:0
         },
         //simple way to turn all lights on or off
-        all: { 
+        all: {
             on: 118,
             off: 0
         }
@@ -462,20 +463,20 @@ var knobLightMap = {
     sideLights: {
         OFF: 0,
         sequence: {
-            0:64, 
+            0:64,
             1:65, 2:66, 3:67, 4:68, 5:69, 6:70,
-            7:71, 8:72, 9:73, 10:74, 11:75 
+            7:71, 8:72, 9:73, 10:74, 11:75
         },
         pan: {
             OFF: 80,
             '-5':81, '-4':82, '-3':83, '-2':84, '-1':85,
-            '0':86, 
-            '1':87,  '2':88, '3':89, '4':90, '5':91 
+            '0':86,
+            '1':87,  '2':88, '3':89, '4':90, '5':91
         },
         level: {
             0:96, 1:97, 2:98, 3:99, 4:100, 5:101, 6: 102,
             7:103, 8:104, 9:105, 10:106, 11:107
-        }, 
+        },
         fill: {
             0:112, OFF:112,
             1:113, 2:114, 3:115, 4:116, 5:117, 6:118
@@ -516,7 +517,7 @@ var signalMap = {
 
 //this are intervals for holding signal levels
 var signalTimers = {
-    'CH1': null, 'CH2': null, 'CH3': null, 'CH4': null, 
+    'CH1': null, 'CH2': null, 'CH3': null, 'CH4': null,
     'CH5': null, 'CH6': null, 'CH7': null, 'CH8': null
 };
 
@@ -524,7 +525,7 @@ var displayElements = {
     'ASSIGNMENT': [75,74],
     'HOURS': [73,72,71],
     'BARS': [73,72,71],
-    'MINUTES': [70,69],    
+    'MINUTES': [70,69],
     'BEATS': [70,69],
     'SECONDS': [68,67],
     'SUB DIVISION': [68,67],
@@ -573,7 +574,7 @@ var dbMap = {
     '-17':52, '-16':53, '-15':55, '-14':56, '-13':58, '-12':60, '-11':62,
      '-10':63, '-9':66, '-8':70, '-7':73, '-6':76, '-5':79, '-4':82, '-3':85,
       '-2':89, '-1':92, '0':95, '1':98, '2':101, '3':105, '4':108, '5':111,
-       '6':114, '7':117, '8':120, '9':124, '10':127, 
+       '6':114, '7':117, '8':120, '9':124, '10':127,
 };
 
 
@@ -598,11 +599,11 @@ var knobModes = {
     CH5: { mode:'normal', value:0, sideLights: false, min:0, max:0 },
     CH6: { mode:'normal', value:0, sideLights: false, min:0, max:0 },
     CH7: { mode:'normal', value:0, sideLights: false, min:0, max:0 },
-    CH8: { mode:'normal', value:0, sideLights: false, min:0, max:0 }    
+    CH8: { mode:'normal', value:0, sideLights: false, min:0, max:0 }
 };
 
 /**
- * Set the mode for a knob to automate lights and values 
+ * Set the mode for a knob to automate lights and values
  * @param {string} knob - the knob to set
  * @param {string} mode - the mode
  * @param {boolean} sideLights - sidelights on
@@ -619,14 +620,14 @@ function setKnobMode(name, mode, sideLights, value) {
 
     name = name.toUpperCase();
     mode = mode.toLowerCase();
-    
+
     try {
         var knob = knobModes[name];
         knob.mode = mode;
         knob.sideLights = sideLights;
         knob.value = value;
-        
-        
+
+
 
         //set the min-max values
         switch(mode) {
@@ -664,7 +665,7 @@ function setKnobMode(name, mode, sideLights, value) {
             default:
                 emit('error', 'setKnobMode: Invalid mode: ' + mode);
         }
-        
+
 
     } catch (e) {
         emit('error', 'setKnobMode: ' + e);
@@ -677,21 +678,21 @@ function processKnobModes(action) {
         var change = action.state ==='right' ? 1 : -1;
         var knob = knobModes[name];
         var oldValue  = knob.value;
-        
+
         if (knob.mode !== 'normal') {
             //set the new value
             knob.value += change;
             knob.value = clamp(knob.value, knob.min, knob.max);
-            
+
             //set the lights
-            setKnobLight(name, knob.mode, knob.value, knob.sideLights);   
+            setKnobLight(name, knob.mode, knob.value, knob.sideLights);
 
             //emit the action only if the value has changed.
             if (oldValue !== knob.value) {
                 emit('action', {
                     control: 'knob',
                     name: name,
-                    state: knob.value    
+                    state: knob.value
                 });
             }
         }
@@ -705,8 +706,8 @@ function processKnobModes(action) {
 
 /**
  * Adds a toggle group
- * @param {string} buttonName 
- * @param {object} toggle 
+ * @param {string} buttonName
+ * @param {object} toggle
  */
 function addToggle(buttonName, toggle) {
     toggles[buttonName] = toggle;
@@ -724,20 +725,20 @@ function setToggle(name, state, noCallback) {
     if (toggles[name]) {
         var toggle = toggles[name];
         if (toggle.state !== state) {
-            setButtonLight(name, state);   
-            if (!noCallback) { 
+            setButtonLight(name, state);
+            if (!noCallback) {
                 if (state === 'on' || state === 'blink') {
                     emit('toggle', name, 'activate');
                 } else {
                     emit('toggle', name, 'deactivate');
                 }
-            } 
+            }
         }
-        if (state === 'blink') { 
+        if (state === 'blink') {
             toggle.blink = true;
         }
         toggle.state = state;
-    }    
+    }
 }
 
 
@@ -754,7 +755,7 @@ function processToggles(name) {
                 state: 'deactivate'
             });
             return true;
-            
+
         } else {
             if (toggle.blink) { toggle.state = 'blink'; }
             else { toggle.state = 'on'; }
@@ -765,7 +766,7 @@ function processToggles(name) {
                 state: 'activate'
             });
             return true;
-        }            
+        }
     }
     return false;
 }
@@ -773,7 +774,7 @@ function processToggles(name) {
 /**
  * Adds a button group
  * @param {string} name
- * @param {object} group 
+ * @param {object} group
  */
 function addGroup(name, group) {
     if (typeof groups[name] === 'object') {
@@ -799,7 +800,7 @@ function removeGroup(name) {
     if (typeof groups[name] === 'object') {
         //first disable any lit lights
         setButtonLight(groups[name].activeButton, 'off');
-              
+
         delete groups[name];
     }
 }
@@ -812,7 +813,7 @@ function setGroup(name, button, noCallback) {
             setButtonLight(group.activeButton, 'off'); //the old button
             group.activeButton = button;
             setButtonLight(group.activeButton, 'on'); //the new button
-            if (!noCallback) { 
+            if (!noCallback) {
                 emit('action', {
                     control: 'group',
                     name: name,
@@ -828,7 +829,7 @@ function isInGroup(name) {
     for (var i=0; i<keys.length; i++) {
         if (groups[keys[i]].members.includes(name)) { return true ;}
     }
-    
+
     return false;
 }
 
@@ -837,8 +838,8 @@ function isInToggle(name) {
     for (var i=0; i<keys.length; i++) {
         if (keys[i] == name) { return true ;}
     }
-    
-    return false;    
+
+    return false;
 }
 
 function processGroups(btnName) {
@@ -879,7 +880,7 @@ function processGroups(btnName) {
                             state: 'touch'
                         });
                         return true;
-                    } 
+                    }
                 }
             }
         }
@@ -894,7 +895,7 @@ function processFaderRelease(value) {
         state: 'release'
     };
     emit('action', response);
-    
+
     var fader = faderMap[value];
     //console.log('fader: ' + value + '=' + fader);
     //console.log('raw: ' + faders[fader].raw);
@@ -913,20 +914,20 @@ function processFader(fader, value, state) {
             name: fader,
             state: 'touch'
         };
-        emit('action', response);    
+        emit('action', response);
         faders[fader].raw = [value, state];
     } else {
         faders[fader].raw = [value, state];
         processFaderValue(fader);
     }
 
-    
+
 }
 
 
 function processFaderValue(fader) {
     var val, iPart, fPart;
-    
+
     iPart = faders[fader].raw[1]; //the integer part
     iPart /= 127; //convert to ratio
 
@@ -935,7 +936,7 @@ function processFaderValue(fader) {
     fPart /= 100; //convert to fraction
 
     val = iPart + fPart; //add them together
- 
+
     faders[fader].position = val;
 
     var oldValue = faders[fader].value; //save the old value for later
@@ -944,7 +945,7 @@ function processFaderValue(fader) {
         val = faders[fader].position; //just to be safe
 
         val *= faderModes[fader].resolution; //convert to provided resolution
-        val = parseInt(val); //strip fractional part   
+        val = parseInt(val); //strip fractional part
         faders[fader].value = val; // set the value
 
     } else if (faderModes[fader].mode === 'decibel') {
@@ -953,14 +954,14 @@ function processFaderValue(fader) {
         var range = faders[fader].raw[1]; //this is a 0-127 increment
         var D = 0; //the gross Distance between the major decibel markings
         var C = 0; // the Count between the decibels
-        
+
         //we're using a 127-point scale for the range, so convert the position to that scale
         //we're not going to strip the decimal though.
-        var position = faders[fader].position * 127;   
+        var position = faders[fader].position * 127;
 
         //determine the D value
-        
-        if (range >=31) { 
+
+        if (range >=31) {
             D = 16;
         } else if (range >=7 && range < 31) {
             D = 8;
@@ -1012,11 +1013,11 @@ function processFaderValue(fader) {
 
         //compute the final decimal value
         if (D && C && lastMajor != 'debug') { //TODO: Remove this test after debugging
-            var delta = position - offset; //how far we've moved from the gross range 
-            
+            var delta = position - offset; //how far we've moved from the gross range
+
             //console.log('---D:' + D + '|C:' + C + '|LM:' + lastMajor + '|P:' + position + '|DLT:' + delta + '|R:' + range);
-            
-            
+
+
             val = delta / D; //percent we've moved based on distance between major decibels
             val *= C; //convert to the count
 
@@ -1030,18 +1031,18 @@ function processFaderValue(fader) {
         }
     }
 
-    
+
     if (faders[fader].value !== oldValue) {
         //console.log('FADER ' + fader + ': ' + faders[fader].position + '=' + faders[fader].value);
         var response = {
             control: 'fader',
             name: fader,
-            state: faders[fader].value   
+            state: faders[fader].value
         };
         emit('action', response);
     }
 
-    
+
 }
 
 /***************************************************************************************/
@@ -1064,7 +1065,7 @@ midiIn.on('message', function(d, message) {
     var state = message[2];
 
     var response = {};
-    
+
     //this is set to true if a toggle or group takes precedence
     //end the normal button state action will not trigger
     var doNotEmitStandardActions = false;
@@ -1075,7 +1076,7 @@ midiIn.on('message', function(d, message) {
     //will fail if the name isn't found
     var name = null;
 
-    if (type === BUTTON ) { 
+    if (type === BUTTON ) {
         //first check to see if it was a fader
         if (value >=104 && value <=112) {
             processFaderRelease(value);
@@ -1084,32 +1085,32 @@ midiIn.on('message', function(d, message) {
             if (name) {
                 response.control = 'button';
                 response.name = name;
-                if (state === ON) { 
+                if (state === ON) {
                     response.state = 'down';
-                    doNotEmitStandardActions = processToggles(response.name); 
+                    doNotEmitStandardActions = processToggles(response.name);
                     //if a toggle is found doNotEmitStandardActions will be true and we wont check the groups
                     if (!doNotEmitStandardActions) {
                         doNotEmitStandardActions = processGroups(response.name);
                     }
-                    if (autoButtonLights.includes(name) && !doNotEmitStandardActions) { 
+                    if (autoButtonLights.includes(name) && !doNotEmitStandardActions) {
                         setButtonLight(name, 'on');
                     }
 
                 }
-                else if (state === OFF) { 
-                    response.state = 'up'; 
+                else if (state === OFF) {
+                    response.state = 'up';
                     doNotEmitStandardActions = isInToggle(name);
                     //if the button is a toggle dont bother testing groups
                     if (!doNotEmitStandardActions) {
                         doNotEmitStandardActions = isInGroup(name);
                     }
 
-                    if (autoButtonLights.includes(name) && !doNotEmitStandardActions) { 
+                    if (autoButtonLights.includes(name) && !doNotEmitStandardActions) {
                         setTimeout(function() {
                             setButtonLight(name, 'off');
                         }, 50);
                     }
-                    
+
                 }
             } else {
                 name = knobButtons[value];
@@ -1119,7 +1120,7 @@ midiIn.on('message', function(d, message) {
                     if (state === ON) { response.state = 'down'; }
                     else if (state === OFF) { response.state = 'up'; }
                 }
-            } 
+            }
         }
     } else if (type === KNOB) {
         name = knobs[value];
@@ -1158,7 +1159,7 @@ midiIn.on('message', function(d, message) {
 function setAllButtonLights(state) {
     if (state !== 'on' && state !== 'off' && state !== 'blink') {
         error('setAllButtonLights - invalid state "' + state + '", use on/off/blink');
-        return null; 
+        return null;
     } else {
         if (state === 'on') { state = ON; }
         else if (state === 'off') { state = OFF; }
@@ -1174,13 +1175,13 @@ function setAllButtonLights(state) {
 /**
  * Changes the light for a button
  * @param {string} name - the name of the button
- * @param {('on'|'off'|'blink')} state 
+ * @param {('on'|'off'|'blink')} state
  */
 function setButtonLight(name, state) {
-    
+
     if (state !== 'on' && state !== 'off' && state !== 'blink') {
         error('setLight - invalid state "' + state + '", use on/off/blink');
-        return null; 
+        return null;
     } else {
         if (state === 'on') { state = ON; }
         else if (state === 'off') { state = OFF; }
@@ -1192,11 +1193,11 @@ function setButtonLight(name, state) {
     var btnIndexes = Object.keys(buttons);
     for (var i=0; i<btnIndexes.length; i++) {
         if (buttons[btnIndexes[i]] == name) {
-            sendMidi([BUTTON, btnIndexes[i], state]);    
+            sendMidi([BUTTON, btnIndexes[i], state]);
             return true;
-        } 
+        }
     }
-    
+
     //this block will only be found if the name isn't found
     error('setLight - button name not found "' + name + '"');
     return false;
@@ -1210,10 +1211,10 @@ function clearDisplay(force) {
     Object.keys(displayElements).forEach(function(key) {
         displayElements[key].forEach(function(elem) {
             if (force) {
-                sendMidi([DISPLAY, elem, displayMap.OFF]); 
+                sendMidi([DISPLAY, elem, displayMap.OFF]);
             } else {
             if (displayElementValues[elem] != 'OFF') {
-                sendMidi([DISPLAY, elem, displayMap.OFF]);        
+                sendMidi([DISPLAY, elem, displayMap.OFF]);
                 }
             }
         });
@@ -1237,7 +1238,7 @@ function addDecimal(value, isNeg) {
             newValue.push(value[i]); //copy the element
             if (i+1<value.length && isNaN(value[i+1])) { //the next element is NaN = decimal point
                 newValue[i] = value[i].toString() + '.';
-            }    
+            }
         }
     }
     return newValue;
@@ -1245,28 +1246,28 @@ function addDecimal(value, isNeg) {
 
 /**
  * Outputs a value to the display
- * @param {string} elementName 
- * @param {string|number} value 
- * @param {boolean} rightAlign 
+ * @param {string} elementName
+ * @param {string|number} value
+ * @param {boolean} rightAlign
  * @param {number} toFixedValue
  */
 function setDisplay(elementName, value, rightAlign, toFixedValue) {
     //if no elementName provided, then use all available elements
-    if (!elementName || elementName === 'all') { 
+    if (!elementName || elementName === 'all') {
         elementArray = ['assignment','HOURS','beats','SECONDS','ticks'];
-    } else if (elementName === 'full') { 
-        //if you send 'full' then all elements after the dash will be used 
+    } else if (elementName === 'full') {
+        //if you send 'full' then all elements after the dash will be used
         elementName = ['HOURS','beats','SECONDS','ticks'];
     }
 
     if (toFixedValue) {
         value = parseFloat(value); //convert from string
-        if (toFixedValue === 0) { 
+        if (toFixedValue === 0) {
             value = Math.round(value); //toFixed doesn't round integers for some reason
         } else {
             value = value.toFixed(toFixedValue); //now it's a string regardless
         }
-        
+
     }
 
     var val = null;
@@ -1279,12 +1280,12 @@ function setDisplay(elementName, value, rightAlign, toFixedValue) {
         elementName.forEach(function(element) {
             elementArray = elementArray.concat(displayElements[element.toUpperCase()]);
         });
-    } else if (!isNaN(elementName)) { 
+    } else if (!isNaN(elementName)) {
         //if the user give the actual display number code
         //this is meant for internal use for showTempMessage
         elementArray.push(elementName);
     }
-    
+
     //console.log(elementArray);
     if (elementArray) {
         //clear the element and quit if the value is specifically false
@@ -1304,10 +1305,10 @@ function setDisplay(elementName, value, rightAlign, toFixedValue) {
 
             value = Array.from(String(value), Number);
             if (isNeg) { value[0] = '-'; } //first element will be null for negative numbers, replace with -
-            
+
             value = addDecimal(value, isNeg); //decimal will be null, replace with .
-            
-              
+
+
         } else if (typeof value === 'string') {
             value = value.toUpperCase().split('');
             //this makes sure spaces render properly
@@ -1319,10 +1320,10 @@ function setDisplay(elementName, value, rightAlign, toFixedValue) {
         //set the alignment
         var sizeDiff = elementArray.length-value.length; //compute the white-space
         if (value.length < elementArray.length) {
-            if (rightAlign) { 
+            if (rightAlign) {
                 for (i=0; i<sizeDiff; i++) {
                     value.unshift('OFF');
-                }  
+                }
             }
             else {
                 for (i=0; i<sizeDiff; i++) {
@@ -1331,27 +1332,27 @@ function setDisplay(elementName, value, rightAlign, toFixedValue) {
             }
         }
 
-        
+
         for (i=0; i<elementArray.length; i++) {
             val = null;
             if (displayMap[value[i]] || displayMap[value[i]] === 0) {
                 val = displayMap[value[i].toString().toUpperCase()];
                 }
             if (val || val === 0) {
-                
+
                 //check to see if the element already has the value
                 if (displayElementValues[elementArray[i]] != value[i]) { //soft check cause why not
                     //send the new value
                     sendMidi([DISPLAY, elementArray[i], val]);
                     //update the map
-                    displayElementValues[elementArray[i]] = value[i]; 
-                    //if (value[i] === 'OFF')  
-                }                    
+                    displayElementValues[elementArray[i]] = value[i];
+                    //if (value[i] === 'OFF')
+                }
             } else {
                 if (val !== null) { error('Invalid display value: ' + displayMap[value[i]]); }
             }
-            
-        }        
+
+        }
     } else {
         error('Invalid element name ' + elementName);
     }
@@ -1359,7 +1360,7 @@ function setDisplay(elementName, value, rightAlign, toFixedValue) {
 
 /**
  * Shows a temporary message on the display
- * @param {string} message 
+ * @param {string} message
  * @param {number} delay
  */
 function showTempMessage(message, delay) {
@@ -1377,14 +1378,14 @@ function showTempMessage(message, delay) {
                 sendMidi([DISPLAY, elem, displayMap[oldDisplayMsg[elem]]]);
             }
         });
-        
+
     }, delay);
 }
 
 /**
  * Set the small indicators on the display panel
- * @param {string} name 
- * @param {string|boolean} state 
+ * @param {string} name
+ * @param {string|boolean} state
  */
 function setDisplayLight(name, state) {
     try {
@@ -1409,17 +1410,17 @@ function setAllDisplayLights(state) {
         } else {
             sendMidi([BUTTON, displayLights[name], OFF]);
         }
-    });   
+    });
 }
 
 /**
  * Sets the position of the fader
- * 
- * @param {string} fader 
- * @param {number} value 
+ *
+ * @param {string} fader
+ * @param {number} value
  */
 function setFader(fader, value) {
-    if (typeof fader === 'string') { fader = fader.toUpperCase(); } 
+    if (typeof fader === 'string') { fader = fader.toUpperCase(); }
     else { return null; }
 
     if (isNaN(value)) {
@@ -1433,7 +1434,7 @@ function setFader(fader, value) {
         value = clamp(value, 0, faderModes[fader].resolution);
         pos = 0;
         var k = value / faderModes[fader].resolution; //the percentage
-        pos = parseInt(k * 127);// k will be a fraction, there are 127 steps in the gross midi command        
+        pos = parseInt(k * 127);// k will be a fraction, there are 127 steps in the gross midi command
     } else if (faderModes[fader].mode === 'decibel') {
         value = clamp(value, -100, 10);
         value = parseInt(value);
@@ -1445,7 +1446,7 @@ function setFader(fader, value) {
 
 /**
  * Resets the faders to unity or -infinity
- * @param {boolean} unity 
+ * @param {boolean} unity
  */
 function resetFaders(unity) {
     var state = unity? 98: 0;
@@ -1470,7 +1471,7 @@ function clearKnobModes() {
         CH5: { mode:'normal', value:0, sideLights: false, min:0, max:0 },
         CH6: { mode:'normal', value:0, sideLights: false, min:0, max:0 },
         CH7: { mode:'normal', value:0, sideLights: false, min:0, max:0 },
-        CH8: { mode:'normal', value:0, sideLights: false, min:0, max:0 }    
+        CH8: { mode:'normal', value:0, sideLights: false, min:0, max:0 }
     };
 }
 
@@ -1484,7 +1485,7 @@ function setFaderMode(fader, mode, resolution) {
     if (mode != 'decibel' && mode != 'position') {
         emit('error', 'setFaderMode: Invalid mode');
     }
-    
+
     if (fader == 'all') {
         faderModes = {
             'CH1': { mode: mode, resolution: resolution },
@@ -1496,10 +1497,10 @@ function setFaderMode(fader, mode, resolution) {
             'CH7': { mode: mode, resolution: resolution },
             'CH8': { mode: mode, resolution: resolution },
             'MAIN': { mode: mode, resolution: resolution },
-        
-        };    
+
+        };
     }
-    
+
     try {
         faderModes[fader].mode = mode;
         faderModes[fader].resolution = resolution;
@@ -1509,7 +1510,7 @@ function setFaderMode(fader, mode, resolution) {
 }
 
 /**
- * 
+ *
  * @param {string} knob - the knob to light
  * @param {string} mode - light mode
  * @param {number/string} value - which lights to light
@@ -1531,8 +1532,8 @@ function setKnobLight(knob, mode, value, showSideLights) {
 
 /**
  * sets the signal level bars
- * @param {string} channel 
- * @param {number|string} level 
+ * @param {string} channel
+ * @param {number|string} level
  */
 function setSignalLevel(channel, level) {
     if (typeof level === 'number') { level = clamp(level, 0, 8); }
@@ -1544,7 +1545,7 @@ function setSignalLevel(channel, level) {
     } catch (e) {
         emit('error', 'setSignalLevel: ' + e);
     }
-   
+
 }
 
 /**
@@ -1558,7 +1559,7 @@ function clearSignalBars() {
 
 /**
  * Sends a raw midi msg to the controller
- * @param {array} triplet 
+ * @param {array} triplet
  */
 function sendRAW(triplet) {
     sendMidi(triplet);
@@ -1568,7 +1569,7 @@ function holdSignalLevel(channel, level) {
     if (typeof level === 'number') { level = clamp(level, 1, 8); } //should this be 0-8?
     signalTimers[channel] = setInterval(function() {
         sendMidi([SIGNAL, signalMap[channel][level], 0]);
-    }, 125);     
+    }, 125);
 }
 
 function clearSignalHold(channel) {
@@ -1577,7 +1578,7 @@ function clearSignalHold(channel) {
 }
 
 function setAutoButtonLights(shouldAutoLight, ...buttonNames) {
-    if (buttonNames[0] === 'all') { 
+    if (buttonNames[0] === 'all') {
         buttonNames = [];
         Object.keys(buttons).forEach(function(key) {
             buttonNames.push(buttons[key]);
@@ -1593,7 +1594,7 @@ function setAutoButtonLights(shouldAutoLight, ...buttonNames) {
             if (autoButtonLights.includes(button)) {
                 autoButtonLights.splice(autoButtonLights.indexOf(button), 1);
             }
-        }  
+        }
     });
 }
 
@@ -1688,7 +1689,7 @@ function roundToFraction(num, fraction) {
             if (num < 1) {
                 scale = -1;
                 num *= scale;
-            }    
+            }
             dec = num % 1;
             dec = Math.round(dec * 100)/100;
             num = num - dec;
@@ -1705,7 +1706,7 @@ function roundToFraction(num, fraction) {
             if (num < 1) {
                 scale = -1;
                 num *= scale;
-            } 
+            }
             dec = num % 1;
             dec = Math.round(dec * 100)/100;
             num = num - dec;
@@ -1723,7 +1724,7 @@ function roundToFraction(num, fraction) {
             if (num < 1) {
                 scale = -1;
                 num *= scale;
-            } 
+            }
             num /= 10;
             dec = num % 1;
             num -= dec;
@@ -1738,7 +1739,7 @@ function roundToFraction(num, fraction) {
             if (num < 1) {
                 scale = -1;
                 num *= scale;
-            } 
+            }
             num /= 10;
             dec = num % 1;
             num -= dec;
